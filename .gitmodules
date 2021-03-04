@@ -1,0 +1,6 @@
+[submodule "external/SmartHome_API"]
+	path = external/SmartHome_API
+	url = git@github.com:JacSko/SmartHome_CommonTypes.git
+[submodule "external/googletest"]
+	path = external/googletest
+	url = git@github.com:google/googletest.git
