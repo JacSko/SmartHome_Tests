@@ -8,8 +8,17 @@ cmake_minimum_required(VERSION 3.10)
 
 project(smarthome_tests)
 
+
 # Builds normal tests, that cooperates with SmartHome binary
 if (NOT UNIT_TESTS)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_suites)
+
+add_executable(main
+		test_suites/main.cpp)
+target_link_libraries(main PUBLIC
+		Logger
+)
 
 endif()
 

@@ -18,6 +18,7 @@
  *  Includes of common headers
  * =============================*/
 #include <stdint.h>
+#include <string>
 /* =============================
  *  Includes of project headers
  * =============================*/
@@ -43,7 +44,7 @@ enum LogGroup
  * @param[in] file_path - path to the output file, where logs will be placed
  * @return True if initialized correctly.
  */
-bool logger_initialize(std::string& file_path);
+bool logger_initialize(const std::string& file_path);
 /**
  * @brief Deinitialize Logger module.
  * @return None.

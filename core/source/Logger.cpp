@@ -5,8 +5,10 @@
 #include <stdarg.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <chrono>
+#include <mutex>
 /* =============================
  *  Includes of project headers
  * =============================*/
@@ -14,7 +16,7 @@
 /* =============================
  *          Defines
  * =============================*/
-#define LOGGER_BUFFER_SIZE 1024
+#define LOGGER_BUFFER_SIZE 4096
 /* =============================
  *   Internal module functions
  * =============================*/
@@ -22,6 +24,13 @@ void logger_notify_data();
 /* =============================
  *       Internal types
  * =============================*/
+typedef struct
+{
+   bool logfile_opened;
+   std::ofstream logfile;
+   std::string logfile_path;
+   std::mutex mtx;
+} LOGGER;
 typedef struct LOG_GROUP
 {
    LogGroup id;
@@ -39,23 +48,52 @@ LOG_GROUP LOGGER_GROUPS[LOG_ENUM_MAX] = {
                         {TF_ERROR, "TF_ERROR"},
                         {TF_SOCKDRV, "TF_SOCKDRV"}};
 
-void logger_initialize()
+LOGGER m_logger;
+
+bool logger_initialize(const std::string& logfile_path)
 {
+   bool result = true;
    m_logger_buffer.resize(LOGGER_BUFFER_SIZE);
+   m_logger.logfile_opened = false;
+   m_logger.logfile_path = logfile_path;
+
+   if (logfile_path.size() > 0)
+   {
+      m_logger.logfile.open(m_logger.logfile_path, std::ios::out);
+      if (m_logger.logfile)
+      {
+         m_logger.logfile_opened = true;
+      }
+      else
+      {
+         printf("Cannot open file %s\n", logfile_path.c_str());
+         result = false;
+      }
+   }
+   return result;
 }
 
 void logger_deinitialize()
 {
    m_logger_buffer.clear();
+   m_logger.logfile.close();
+   m_logger.logfile_opened = false;
+   m_logger.logfile_path = "";
+
 }
 void logger_notify_data()
 {
+   if (m_logger.logfile_opened)
+   {
+      m_logger.logfile << std::string(m_logger_buffer.data());
+   }
    std::cout << std::string(m_logger_buffer.data());
 }
 void logger_send(LogGroup group, const char* prefix, const char* fmt, ...)
 {
    if (group < LOG_ENUM_MAX)
    {
+      std::lock_guard<std::mutex> lock (m_logger.mtx);
       va_list va;
       {
          auto currentTime = std::chrono::system_clock::now();
@@ -79,6 +117,7 @@ void logger_send_if(uint8_t cond_bool, LogGroup group, const char* prefix, const
 {
    if (cond_bool != 0 && group < LOG_ENUM_MAX)
    {
+      std::lock_guard<std::mutex> lock (m_logger.mtx);
       va_list va;
       {
          auto currentTime = std::chrono::system_clock::now();
