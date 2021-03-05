@@ -8,6 +8,14 @@ target_include_directories(Logger PUBLIC
 	public
 )
 
+add_library(TestSubjectExecutor STATIC
+		source/TestSubjectExecutor.cpp
+)
+target_include_directories(TestSubjectExecutor PUBLIC
+	include
+	public
+)
+
 
 endif()
 

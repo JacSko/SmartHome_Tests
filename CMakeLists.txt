@@ -18,6 +18,7 @@ add_executable(main
 		test_suites/main.cpp)
 target_link_libraries(main PUBLIC
 		Logger
+		TestSubjectExecutor
 )
 
 endif()
