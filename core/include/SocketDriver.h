@@ -18,29 +18,38 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <functional>
+#include <netinet/in.h>
 /* =============================
  *   Includes of project headers
  * =============================*/
-#include "ISocketDriver.h"
 /* =============================
  *           Defines
  * =============================*/
 #define SOCKDRV_MAX_RW_SIZE 1024
 #define SOCKDRV_RECV_BUFFER_SIZE 1024
-#define SOCKDRV_NO_DATA_TIMEOUT_S 10
-class SocketDriver : public ISocketDriver
+enum class DriverEvent
+{
+   DRIVER_CONNECTED,    /**< Driver connects successfully to server */
+   DRIVER_DISCONNECTED, /**< Driver disconnected - server closed or error appears */
+   DRIVER_DATA_RECV,    /**< New data received by driver */
+};
+typedef std::function<void(DriverEvent ev, const std::vector<uint8_t>& data, size_t count)> SocketListener;
+
+class SocketDriver
 {
 public:
    SocketDriver();
    ~SocketDriver();
+
+   bool connect(const std::string& ip_address, uint16_t port);
+   bool disconnect();
+   bool isConnected();
+   void addListener(SocketListener callback);
+   void removeListener();
+   bool write(const std::vector<uint8_t>& data, size_t size = 0);
+
 private:
-   /* ISocketDriver */
-   bool connect(const std::string& ip_address, uint16_t port) override;
-   bool disconnect() override;
-   bool isConnected() override;
-   void addListener(SocketListener* callback) override;
-   void removeListener(SocketListener* callback) override;
-   bool write(const std::vector<uint8_t>& data, size_t size = 0) override;
    void setDelimiter(char c);
    void threadExecute();
    void notify_callbacks(DriverEvent ev, const std::vector<uint8_t>& data, size_t count);
@@ -49,13 +58,14 @@ private:
    uint16_t m_server_port;
    std::atomic<bool> m_is_connected;
    char m_delimiter;
-   std::vector<uint8_t> m_recv_buffer;
    size_t m_recv_buffer_size;
    std::thread m_thread;
    std::atomic<bool> m_thread_running;
    std::mutex m_mutex;
    int m_sock_fd;
-   std::vector<SocketListener*> m_listeners;
+   int m_client;
+   struct sockaddr_in m_serv_addr;
+   SocketListener m_listener;
 #if defined (SOCKDRV_FRIEND_TESTS)
    SOCKDRV_FRIEND_TESTS
 #endif

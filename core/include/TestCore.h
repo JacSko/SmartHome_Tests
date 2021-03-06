@@ -28,6 +28,7 @@
 #include "inputs_types.h"
 #include "env_types.h"
 #include "system_config_values.h"
+#include "notification_types.h"
 /* =============================
  *          Defines
  * =============================*/
@@ -44,6 +45,12 @@ typedef struct
 
 typedef struct
 {
+   NTF_CMD_ID id;
+   std::vector<uint8_t> payload;
+} APP_NTF;
+
+typedef struct
+{
    DHT_SENSOR_ID id;
    DHT_SENSOR_TYPE type;
    int8_t temp_h;
@@ -51,16 +58,6 @@ typedef struct
    uint8_t hum_h;
    uint8_t hum_l;
 } DHT_Device;
-
-struct Relays_board : public I2C_Board
-{
-   Relays_board(uint8_t addr):
-   i2c_address(addr),
-   state(0xFFFF),
-   buffering_enabled(false)
-   {
-   }
-};
 
 
 class TestCore
@@ -76,13 +73,22 @@ public:
    RELAY_STATE getState(RELAY_ID);
    INPUT_STATE getState(INPUT_ID);
 
+   void startI2CBuffering(uint8_t address);
+   void stopI2CBuffering(uint8_t address);
+   void clearI2CBuffer(uint8_t address);
+
+   bool checkI2CBufferSize(size_t size);
+   bool checkI2CBufferElement(uint16_t idx, std::vector<uint8_t>& exp);
+   bool checkLastI2CNotification(uint8_t address, std::vector<uint8_t>& msg);
+
+   void startAppDataBuffering();
+   void stopAppDataBuffering();
+   void clearAppDataBuffering();
+
+   bool wasAppNtfSent(NTF_CMD_ID id, std::vector<uint8_t>& msg);
+
 private:
-   std::vector<DHT_Device> m_dht_sensors;
-   I2C_Board m_rel_board;
-   I2C_Board m_inp_board;
-   I2C_Board m_led_board;
-
-
+   std::vector<APP_NTF> m_app_ntf;
 };
 
 

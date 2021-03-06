@@ -16,13 +16,36 @@ target_include_directories(TestSubjectExecutor PUBLIC
 	public
 )
 
+add_library(SocketDriver STATIC
+		source/SocketDriver.cpp
+)
+target_include_directories(SocketDriver PUBLIC
+	include
+	public
+)
+target_link_libraries(SocketDriver PUBLIC
+	Logger
+	SmartHomeTypes
+	pthread
+)
+
+add_library(TestCore STATIC
+		source/TestCore.cpp
+)
+target_include_directories(TestCore PUBLIC
+	include
+	public
+)
+target_link_libraries(TestCore PUBLIC
+	Logger
+	SmartHomeTypes
+)
 
 endif()
 
 
-
 if (UNIT_TESTS)
 
-add_subdirectory(test)
+	add_subdirectory(tests)
 
 endif()

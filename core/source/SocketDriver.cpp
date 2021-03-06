@@ -3,14 +3,16 @@
  * =============================*/
 #include "SocketDriver.h"
 #include "Logger.h"
+#include "system_config_values.h"
 /* =============================
  *   Includes of common headers
  * =============================*/
 #include <iostream>
+#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <algorithm>
 #include <string.h>
 #include "notification_types.h"
@@ -51,10 +53,10 @@ m_server_address(""),
 m_server_port(0),
 m_is_connected(false),
 m_delimiter(NTF_MESSAGE_DELIMITER),
-m_recv_buffer(SOCKDRV_RECV_BUFFER_SIZE, 0),
 m_recv_buffer_size(0),
 m_thread_running(false),
-m_sock_fd(0)
+m_sock_fd(-1),
+m_client(-1)
 {
 }
 bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
@@ -80,34 +82,46 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
          break;
       }
       struct timeval tv;
-      tv.tv_sec = SOCKDRV_NO_DATA_TIMEOUT_S;
+      tv.tv_sec = SOCK_RECV_TIMEOUT_S;
       tv.tv_usec = 0;
       if (system_call::setsockopt(m_sock_fd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&tv,sizeof(struct timeval)) < 0)
       {
          logger_send(TF_ERROR, __func__, "socket timeout err: %s", strerror(errno));
          break;
       }
+      int enable = 1;
+      if (system_call::setsockopt(m_sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) < 0)
+      {
+         logger_send(TF_ERROR, __func__, "cannot set address reuse: %s", strerror(errno));
+         break;
+      }
+      m_serv_addr.sin_family = AF_INET;
+      m_serv_addr.sin_port = htons(port);
 
-      struct sockaddr_in serv_addr;
-      serv_addr.sin_family = AF_INET;
-      serv_addr.sin_port = htons(port);
-
-      if(inet_pton(AF_INET, ip_address.c_str(), &serv_addr.sin_addr)<=0)
+      if(inet_pton(AF_INET, ip_address.c_str(), &m_serv_addr.sin_addr)<=0)
       {
          logger_send(TF_ERROR, __func__, "cannot convert %s", ip_address.c_str());
          break;
       }
-      if(system_call::connect(m_sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) >= 0)
+
+      if (bind(m_sock_fd, (struct sockaddr *)&m_serv_addr, sizeof(m_serv_addr)) != 0)
       {
-         m_server_address = ip_address;
-         m_server_port = port;
-         m_thread = std::thread(&SocketDriver::threadExecute, this);
-         m_is_connected = true;
-         notify_callbacks(DriverEvent::DRIVER_CONNECTED, {}, 0);
-         while(!m_thread_running);
-         result = true;
-         logger_send(TF_SOCKDRV, __func__, "connected ok!");
+         logger_send(TF_ERROR, __func__, "bind failed: %s", strerror(errno));
+         break;
       }
+
+      if (listen(m_sock_fd, 1) < 0)
+      {
+         logger_send(TF_ERROR, __func__, "listen failed: %s", strerror(errno));
+         break;
+      }
+
+      m_server_address = ip_address;
+      m_server_port = port;
+      m_thread = std::thread(&SocketDriver::threadExecute, this);
+      while(!m_thread_running);
+      result = true;
+      logger_send(TF_SOCKDRV, __func__, "server started, avaiting connection!");
 
    }while(0);
 
@@ -122,91 +136,119 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
 
 void SocketDriver::threadExecute()
 {
-   m_recv_buffer_size = 0;
-   int bytes_count = 0;
    m_thread_running = true;
-   logger_send(TF_SOCKDRV, __func__, "starting thread sockdrv!");
-   while(m_thread_running)
+   size_t addrlen = sizeof(m_serv_addr);
+   uint8_t msg_header [SOCK_MSG_HEADER_SIZE + 1];
+   std::vector<uint8_t> recv_buffer (SOCKDRV_RECV_BUFFER_SIZE + 1, 0);
+   ssize_t recv_bytes = 0;
+
+   while (m_thread_running)
    {
-      bytes_count = system_call::recv(m_sock_fd, &m_recv_buffer[0] + m_recv_buffer_size, SOCKDRV_RECV_BUFFER_SIZE, 0);
-      if (bytes_count > 0)
+      if(m_client < 0)
       {
-         m_recv_buffer_size += bytes_count;
-         /* check if delimiter found from begin to the end of data */ /*TODO search only newly received data, not whole buffer each time */
-         auto it = std::find(m_recv_buffer.begin(), (m_recv_buffer.begin() + m_recv_buffer_size), (uint8_t)m_delimiter);
-         if (it != (m_recv_buffer.begin() + m_recv_buffer_size))
+         m_client = accept(m_sock_fd, (struct sockaddr *)&m_serv_addr, (socklen_t*)&addrlen);
+         if (m_client >= 0)
          {
-            notify_callbacks(DriverEvent::DRIVER_DATA_RECV, std::vector<uint8_t>(m_recv_buffer.begin(), it), std::distance(m_recv_buffer.begin(), it));
-            std::copy(it + 1, m_recv_buffer.begin() + m_recv_buffer_size, m_recv_buffer.begin());
-            m_recv_buffer_size = std::distance(it + 1, m_recv_buffer.begin() + m_recv_buffer_size);
+            logger_send(TF_SOCKDRV, __func__, "got client");
+            notify_callbacks(DriverEvent::DRIVER_CONNECTED, {}, 0);
+         }
+         else
+         {
+            std::this_thread::sleep_for(std::chrono::milliseconds(SOCK_RECV_TIMEOUT_S));
          }
       }
-      else
+
+      else if (m_client >= 0)
       {
-         logger_send(TF_ERROR, __func__, "socket error: %s", strerror(errno));
-         notify_callbacks(DriverEvent::DRIVER_DISCONNECTED, {}, 0);
-         m_thread_running = false;
-         system_call::close(m_sock_fd);
-         m_is_connected = false;
-         m_sock_fd = 0;
+         recv_bytes = recv(m_client, msg_header, SOCK_MSG_HEADER_SIZE, 0);
+         if (recv_bytes == SOCK_MSG_HEADER_SIZE)
+         {
+            msg_header[SOCK_MSG_HEADER_SIZE] = 0x00;
+            uint32_t len_to_read = atoi((char*)msg_header);
+            recv_bytes = recv(m_client, recv_buffer.data(), len_to_read, 0);
+            if (recv_bytes > 0)
+            {
+               recv_buffer[recv_bytes] = 0x00;
+               notify_callbacks(DriverEvent::DRIVER_DATA_RECV, recv_buffer, recv_bytes);
+            }
+         }
+
+         if (recv_bytes == 0)
+         {
+            logger_send(TF_SOCKDRV, __func__,"client disconnected");
+            notify_callbacks(DriverEvent::DRIVER_DISCONNECTED, {}, 0);
+            close(m_client);
+            m_client = -1;
+         }
+         else if (errno == EAGAIN || errno == EWOULDBLOCK)
+         {
+         }
       }
    }
-   logger_send(TF_SOCKDRV, __func__, "exiting thread sockdrv");
-   return;
+
+   if (m_client >= 0)
+   {
+      notify_callbacks(DriverEvent::DRIVER_DISCONNECTED, {}, 0);
+      close(m_client);
+      m_client = -1;
+   }
+
 }
 void SocketDriver::notify_callbacks(DriverEvent ev, const std::vector<uint8_t>& data, size_t count)
 {
    std::lock_guard<std::mutex> lock (m_mutex);
-   for (auto& l : m_listeners)
+   if (m_listener)
    {
-      l->onSocketEvent(ev, data, count);
+      m_listener(ev, data, count);
    }
 }
 bool SocketDriver::disconnect()
 {
-   logger_send(TF_ERROR, __func__, "");
    bool result = false;
-   if (m_thread.joinable())
+   if (m_thread_running)
    {
       m_thread_running = false;
       m_thread.join();
       result = true;
    }
-   if (m_sock_fd > 0)
+
+   if (m_sock_fd >= 0)
    {
-      system_call::close(m_sock_fd);
-      m_sock_fd = 0;
+      close(m_sock_fd);
    }
-   m_is_connected = false;
    return result;
+
 }
 bool SocketDriver::isConnected()
 {
    return m_is_connected;
 }
-void SocketDriver::addListener(SocketListener* callback)
+void SocketDriver::addListener(SocketListener callback)
 {
    std::lock_guard<std::mutex> lock (m_mutex);
-   m_listeners.push_back(callback);
+   m_listener = callback;
 }
-void SocketDriver::removeListener(SocketListener* callback)
+void SocketDriver::removeListener()
 {
    std::lock_guard<std::mutex> lock (m_mutex);
-   std::remove_if(m_listeners.begin(), m_listeners.end(), [&](SocketListener* list){ return list == callback;});
 }
 bool SocketDriver::write(const std::vector<uint8_t>& data, size_t size)
 {
    bool result = false;
    ssize_t bytes_to_write = size == 0? data.size() : size;
    logger_send(TF_SOCKDRV, __func__, "writing %u bytes", size);
+   uint8_t msg_header [SOCK_MSG_HEADER_SIZE + 1];
    if (bytes_to_write <= SOCKDRV_MAX_RW_SIZE)
    {
+      std::snprintf((char*)msg_header, SOCK_MSG_HEADER_SIZE + 1, "%.4ld", size);
+      send(m_client, msg_header, SOCK_MSG_HEADER_SIZE, 0);
+
       ssize_t bytes_written = 0;
       ssize_t current_write = 0;
       result = true;
       while (bytes_to_write > 0)
       {
-         current_write = system_call::send(m_sock_fd, data.data() + bytes_written, bytes_to_write, 0);
+         current_write = system_call::send(m_client, data.data() + bytes_written, bytes_to_write, 0);
          if (current_write > 0)
          {
             bytes_written += current_write;
