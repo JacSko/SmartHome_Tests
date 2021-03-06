@@ -65,20 +65,22 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
    logger_send(TF_SOCKDRV, __func__, "");
    do
    {
+      m_server_port = port;
+      m_server_address = ip_address;
       if (disconnect())
       {
-         logger_send(TF_ERROR, __func__, "sockthread disconnected");
+         logger_send(TF_ERROR, __func__, "[%d] sockthread disconnected", m_server_port);
       }
 
       if (ip_address.empty() || port == 0)
       {
-         logger_send(TF_ERROR, __func__, "invalid data %s:%d", ip_address.c_str(), port);
+         logger_send(TF_ERROR, __func__, " [%d]invalid data %s:%d", ip_address.c_str(), port, m_server_port);
          break;
       }
       m_sock_fd = system_call::socket(AF_INET, SOCK_STREAM, 0);
       if (m_sock_fd < 0)
       {
-         logger_send(TF_ERROR, __func__, "cannot create socket, err: %s", strerror(errno));
+         logger_send(TF_ERROR, __func__, "[%d] cannot create socket, err: %s", strerror(errno), m_server_port);
          break;
       }
       struct timeval tv;
@@ -86,13 +88,13 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
       tv.tv_usec = 0;
       if (system_call::setsockopt(m_sock_fd, SOL_SOCKET, SO_RCVTIMEO,(struct timeval *)&tv,sizeof(struct timeval)) < 0)
       {
-         logger_send(TF_ERROR, __func__, "socket timeout err: %s", strerror(errno));
+         logger_send(TF_ERROR, __func__, "[%d] socket timeout err: %s", strerror(errno), m_server_port);
          break;
       }
       int enable = 1;
       if (system_call::setsockopt(m_sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) < 0)
       {
-         logger_send(TF_ERROR, __func__, "cannot set address reuse: %s", strerror(errno));
+         logger_send(TF_ERROR, __func__, "[%d] cannot set address reuse: %s", strerror(errno), m_server_port);
          break;
       }
       m_serv_addr.sin_family = AF_INET;
@@ -100,19 +102,19 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
 
       if(inet_pton(AF_INET, ip_address.c_str(), &m_serv_addr.sin_addr)<=0)
       {
-         logger_send(TF_ERROR, __func__, "cannot convert %s", ip_address.c_str());
+         logger_send(TF_ERROR, __func__, "[%d] cannot convert %s", ip_address.c_str(), m_server_port);
          break;
       }
 
       if (bind(m_sock_fd, (struct sockaddr *)&m_serv_addr, sizeof(m_serv_addr)) != 0)
       {
-         logger_send(TF_ERROR, __func__, "bind failed: %s", strerror(errno));
+         logger_send(TF_ERROR, __func__, "[%d] bind failed: %s", m_server_port, strerror(errno));
          break;
       }
 
       if (listen(m_sock_fd, 1) < 0)
       {
-         logger_send(TF_ERROR, __func__, "listen failed: %s", strerror(errno));
+         logger_send(TF_ERROR, __func__, "[%d] listen failed: %s", strerror(errno), m_server_port);
          break;
       }
 
@@ -121,13 +123,13 @@ bool SocketDriver::connect(const std::string& ip_address, uint16_t port)
       m_thread = std::thread(&SocketDriver::threadExecute, this);
       while(!m_thread_running);
       result = true;
-      logger_send(TF_SOCKDRV, __func__, "server started, avaiting connection!");
+      logger_send(TF_SOCKDRV, __func__, "[%d] server started, avaiting connection!", m_server_port);
 
    }while(0);
 
    if (!result)
    {
-      logger_send(TF_ERROR, __func__, "error");
+      logger_send(TF_ERROR, __func__, "[%d] error", m_server_port);
       disconnect();
    }
 
@@ -149,7 +151,7 @@ void SocketDriver::threadExecute()
          m_client = accept(m_sock_fd, (struct sockaddr *)&m_serv_addr, (socklen_t*)&addrlen);
          if (m_client >= 0)
          {
-            logger_send(TF_SOCKDRV, __func__, "got client");
+            logger_send(TF_SOCKDRV, __func__, "[%d] got client", m_server_port);
             notify_callbacks(DriverEvent::DRIVER_CONNECTED, {}, 0);
          }
          else
@@ -175,7 +177,7 @@ void SocketDriver::threadExecute()
 
          if (recv_bytes == 0)
          {
-            logger_send(TF_SOCKDRV, __func__,"client disconnected");
+            logger_send(TF_SOCKDRV, __func__,"[%d] client disconnected", m_server_port);
             notify_callbacks(DriverEvent::DRIVER_DISCONNECTED, {}, 0);
             close(m_client);
             m_client = -1;
@@ -197,6 +199,19 @@ void SocketDriver::threadExecute()
 void SocketDriver::notify_callbacks(DriverEvent ev, const std::vector<uint8_t>& data, size_t count)
 {
    std::lock_guard<std::mutex> lock (m_mutex);
+
+   switch(ev)
+   {
+   case DriverEvent::DRIVER_CONNECTED:
+      m_is_connected = true;
+      break;
+   case DriverEvent::DRIVER_DISCONNECTED:
+      m_is_connected = false;
+      break;
+   default:
+      break;
+   }
+
    if (m_listener)
    {
       m_listener(ev, data, count);
@@ -231,12 +246,13 @@ void SocketDriver::addListener(SocketListener callback)
 void SocketDriver::removeListener()
 {
    std::lock_guard<std::mutex> lock (m_mutex);
+   m_listener = nullptr;
 }
 bool SocketDriver::write(const std::vector<uint8_t>& data, size_t size)
 {
    bool result = false;
    ssize_t bytes_to_write = size == 0? data.size() : size;
-   logger_send(TF_SOCKDRV, __func__, "writing %u bytes", size);
+   logger_send(TF_SOCKDRV, __func__, "[%d] writing %u bytes", size, m_server_port);
    uint8_t msg_header [SOCK_MSG_HEADER_SIZE + 1];
    if (bytes_to_write <= SOCKDRV_MAX_RW_SIZE)
    {
@@ -261,13 +277,13 @@ bool SocketDriver::write(const std::vector<uint8_t>& data, size_t size)
          bytes_to_write -= bytes_written;
       }
    }
-   logger_send_if(!result, TF_ERROR, __func__, "cannot write %u bytes", size);
+   logger_send_if(!result, TF_ERROR, __func__, "[%d] cannot write %u bytes", size, m_server_port);
    return result;
 }
 void SocketDriver::setDelimiter(char c)
 {
    std::lock_guard<std::mutex> lock (m_mutex);
-   logger_send(TF_SOCKDRV, __func__, "Setting new delimiter: %x", c);
+   logger_send(TF_SOCKDRV, __func__, "[%d] Setting new delimiter: %x", c, m_server_port);
    m_delimiter = c;
 }
 SocketDriver::~SocketDriver()

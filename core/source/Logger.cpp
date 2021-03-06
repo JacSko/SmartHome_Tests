@@ -46,7 +46,8 @@ LOG_GROUP LOGGER_GROUPS[LOG_ENUM_MAX] = {
                         {STM_HW_STUB, "STM_HW_STUB"},
                         {TF_TEST_MARKER, "TF_TEST_MARKER"},
                         {TF_ERROR, "TF_ERROR"},
-                        {TF_SOCKDRV, "TF_SOCKDRV"}};
+                        {TF_SOCKDRV, "TF_SOCKDRV"},
+                        {TF_TC, "TF_TC"}};
 
 LOGGER m_logger;
 
@@ -86,6 +87,7 @@ void logger_notify_data()
    if (m_logger.logfile_opened)
    {
       m_logger.logfile << std::string(m_logger_buffer.data());
+      m_logger.logfile.flush();
    }
    std::cout << std::string(m_logger_buffer.data());
 }
@@ -128,7 +130,7 @@ void logger_send_if(uint8_t cond_bool, LogGroup group, const char* prefix, const
          idx = sprintf(m_logger_buffer.data(), "%s:%03d] %s - %s - ",m_logger_buffer.data(),(int)millis, LOGGER_GROUPS[group].name, prefix);
          va_start(va, fmt);
          {
-            idx = vsprintf(m_logger_buffer.data() + idx, fmt, va);
+             idx += vsprintf(m_logger_buffer.data() + idx, fmt, va);
          }
          va_end(va);
          m_logger_buffer[idx++] = '\n';

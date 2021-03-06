@@ -36,6 +36,7 @@ enum LogGroup
    TF_TEST_MARKER,   /**< Puts test marker for easy log analysis */
    TF_ERROR,         /**< Error logs */
    TF_SOCKDRV,       /**< Logs from test framework - Socket driver */
+   TF_TC,            /**< Logs from TestCore */
    LOG_ENUM_MAX,
 };
 

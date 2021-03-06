@@ -39,6 +39,7 @@ target_include_directories(TestCore PUBLIC
 target_link_libraries(TestCore PUBLIC
 	Logger
 	SmartHomeTypes
+	TestSubjectExecutor
 )
 
 endif()

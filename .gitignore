@@ -4,3 +4,4 @@
 *.pdf
 doc/*
 !doc/Documentation.ods
+logs/*

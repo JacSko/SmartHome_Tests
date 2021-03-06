@@ -20,6 +20,7 @@ target_link_libraries(main PUBLIC
 		Logger
 		TestSubjectExecutor
 		SocketDriver
+		TestCore
 )
 
 endif()
