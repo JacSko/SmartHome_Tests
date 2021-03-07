@@ -252,7 +252,7 @@ bool SocketDriver::write(const std::vector<uint8_t>& data, size_t size)
 {
    bool result = false;
    ssize_t bytes_to_write = size == 0? data.size() : size;
-   logger_send(TF_SOCKDRV, __func__, "[%d] writing %u bytes", size, m_server_port);
+   logger_send(TF_SOCKDRV, __func__, "[%d] writing %u bytes", m_server_port, size);
    uint8_t msg_header [SOCK_MSG_HEADER_SIZE + 1];
    if (bytes_to_write <= SOCKDRV_MAX_RW_SIZE)
    {

@@ -8,6 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(smarthome_tests)
 
+add_definitions(-DPROJECT_ROOT_PATH=\"${PROJECT_SOURCE_DIR}\")
 
 # Builds normal tests, that cooperates with SmartHome binary
 if (NOT UNIT_TESTS)

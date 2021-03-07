@@ -60,7 +60,11 @@ bool logger_initialize(const std::string& logfile_path)
 
    if (logfile_path.size() > 0)
    {
-      m_logger.logfile.open(m_logger.logfile_path, std::ios::out);
+      char complete_path [512];
+      snprintf(complete_path, 512, "%s/logs/%s.txt", PROJECT_ROOT_PATH, logfile_path.c_str());
+
+      printf("opening file:%s:\n", complete_path);
+      m_logger.logfile.open(std::string(complete_path), std::ios::out);
       if (m_logger.logfile)
       {
          m_logger.logfile_opened = true;
