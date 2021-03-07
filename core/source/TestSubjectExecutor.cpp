@@ -18,7 +18,6 @@ m_test_subject_path(process_path)
 
 pid_t TestSubjectExecutor::start_test_subject()
 {
-   char buffer [1024];
    pid_t pid = fork();
    if (pid == 0)
    {

@@ -35,6 +35,8 @@
 /* =============================
  *          Defines
  * =============================*/
+#define WAIT_MS(_ms) std::this_thread::sleep_for(std::chrono::milliseconds(_ms));
+#define WAIT_S(_s) std::this_thread::sleep_for(std::chrono::seconds(_s));
 /* =============================
  *       Data structures
  * =============================*/
@@ -99,7 +101,7 @@ public:
    void stopAppDataBuffering();
    void clearAppDataBuffer();
 
-   bool wasAppNtfSent(NTF_CMD_ID id, std::vector<uint8_t>& msg);
+   bool wasAppNtfSent(NTF_CMD_ID id, const std::vector<uint8_t>& msg);
 
 private:
 
@@ -110,7 +112,6 @@ private:
    bool sendToHwStub(const std::vector<uint8_t>& data);
 
 
-   pid_t m_test_bin_pid;
    uint8_t rel_id_to_relay_no(RELAY_ID id);
    uint16_t rel_relay_to_mask(uint8_t relay_no);
    uint16_t rel_id_to_mask(RELAY_ID id);
@@ -128,6 +129,7 @@ private:
    SocketDriver m_bluetooth_driver;
    SocketDriver m_app_ntf_driver;
    TestSubjectExecutor m_bin_exec;
+   pid_t m_test_bin_pid;
    std::vector<uint8_t> m_buffer;
    std::mutex m_buf_mtx;
    std::vector<uint8_t> m_send_buf;

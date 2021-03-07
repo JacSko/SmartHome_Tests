@@ -95,6 +95,7 @@ void TestCore::onStubEvent(DriverEvent ev, const std::vector<uint8_t>& data, siz
             switch((HW_STUB_EVENT_ID)m_buffer[0])
             {
             case I2C_STATE_NTF:
+            {
                uint16_t state = m_buffer[4] << 8;
                state |= (m_buffer[3] & 0x00FF);
                m_i2c_map[m_buffer[2]].state = state;
@@ -103,6 +104,9 @@ void TestCore::onStubEvent(DriverEvent ev, const std::vector<uint8_t>& data, siz
                   m_i2c_map[m_buffer[2]].buffer.push_back(state);
                }
                logger_send(TF_TC, __func__, "got i2c data addr %x, state %.4x", m_buffer[2], state);
+            }
+            break;
+            default:
                break;
             }
          }
@@ -131,10 +135,14 @@ void TestCore::onAppEvent(DriverEvent ev, const std::vector<uint8_t>& data, size
       logger_send(STM_WIFI_NTF, __func__, "%s", data.data());
       if (data.size() >= NTF_HEADER_SIZE)
       {
-         APP_NTF ntf;
-         ntf.id = (NTF_CMD_ID) data[0];
-         ntf.payload.insert(ntf.payload.begin(), data.begin(), data.end());
-         m_app_ntfs.push_back(ntf);
+         std::lock_guard<std::mutex> lock(m_buf_mtx);
+         if (decodeBytesFromString(data, count))
+         {
+            APP_NTF ntf;
+            ntf.id = (NTF_CMD_ID) m_buffer[0];
+            ntf.payload.insert(ntf.payload.begin(), m_buffer.begin(), m_buffer.end());
+            m_app_ntfs.push_back(ntf);
+         }
       }
    }
 }
@@ -354,7 +362,7 @@ void TestCore::clearAppDataBuffer()
 {
    m_app_ntfs.clear();
 }
-bool TestCore::wasAppNtfSent(NTF_CMD_ID id, std::vector<uint8_t>& msg)
+bool TestCore::wasAppNtfSent(NTF_CMD_ID id, const std::vector<uint8_t>& msg)
 {
    bool result = false;
    for (APP_NTF& ntf : m_app_ntfs)

@@ -11,35 +11,22 @@ project(smarthome_tests)
 
 # Builds normal tests, that cooperates with SmartHome binary
 if (NOT UNIT_TESTS)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_suites/bin)
-
-add_executable(main
-		test_suites/source/main.cpp)
-target_link_libraries(main PUBLIC
-		Logger
-		TestSubjectExecutor
-		SocketDriver
-		TestCore
-)
-
 endif()
 
 
 # Builds unit tests of core test framework implementation
 if (UNIT_TESTS)
-
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-	set(CMAKE_CXX_FLAGS "-g -O0 -Wall -fno-exceptions -fprofile-arcs -ftest-coverage -fPIC")
 	add_definitions(
 		-DUNIT_TESTS
 		)
-	enable_testing()
-
 endif()
 
-
+set(CMAKE_CXX_FLAGS "-g -O0 -Wall -fno-exceptions -fprofile-arcs -ftest-coverage -fPIC")
+enable_testing()
 
 add_subdirectory(core)
 add_subdirectory(external/SmartHome_API)
 add_subdirectory(external/googletest)
+add_subdirectory(test_suites)

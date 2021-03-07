@@ -40,6 +40,7 @@ target_link_libraries(TestCore PUBLIC
 	Logger
 	SmartHomeTypes
 	TestSubjectExecutor
+	SocketDriver
 )
 
 endif()
