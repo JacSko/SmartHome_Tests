@@ -12,10 +12,10 @@ project(smarthome_tests)
 # Builds normal tests, that cooperates with SmartHome binary
 if (NOT UNIT_TESTS)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_suites)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_suites/bin)
 
 add_executable(main
-		test_suites/main.cpp)
+		test_suites/source/main.cpp)
 target_link_libraries(main PUBLIC
 		Logger
 		TestSubjectExecutor
