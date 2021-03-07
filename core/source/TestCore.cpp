@@ -174,9 +174,10 @@ bool TestCore::decodeBytesFromString(const std::vector<uint8_t>& data, size_t si
    logger_send(TF_TC, __func__, "decoded %u bytes", m_buffer.size());
    return result;
 }
-void TestCore::setState(RELAY_ID id, RELAY_STATE state)
+bool TestCore::setRelayState(RELAY_ID id, RELAY_STATE state)
 {
    std::vector<uint8_t> cmd;
+   bool result = true;
    if (state == RELAY_STATE_ON)
    {
       m_i2c_map[RELAYS_I2C_ADDRESS].state &= ~rel_id_to_mask(id);
@@ -194,8 +195,11 @@ void TestCore::setState(RELAY_ID id, RELAY_STATE state)
 
    if (!sendToHwStub(cmd))
    {
+      result = false;
       logger_send(TF_ERROR, __func__, "cannot write relays state to hw stub");
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s:%u %u => %u", __func__, id, state, result);
+   return result;
 }
 uint16_t TestCore::rel_id_to_mask(RELAY_ID id)
 {
@@ -232,6 +236,7 @@ bool TestCore::sendToHwStub(const std::vector<uint8_t>& data)
    bytes_formatted[--byte_idx] = 0x00;
 
    std::lock_guard<std::mutex> lock(m_send_buf_mtx);
+   m_send_buf.clear();
    m_send_buf.insert(m_send_buf.begin(), bytes_formatted, bytes_formatted + byte_idx);
    result = m_hwstub_driver.write(m_send_buf, m_send_buf.size());
    return result;
@@ -270,8 +275,9 @@ uint16_t TestCore::inp_input_to_mask(uint8_t input)
 
    return result;
 }
-void TestCore::setState(INPUT_ID id, INPUT_STATE state)
+bool TestCore::setInputState(INPUT_ID id, INPUT_STATE state)
 {
+   bool result = true;
    std::vector<uint8_t> cmd;
    if (state == INPUT_STATE_ACTIVE)
    {
@@ -290,11 +296,15 @@ void TestCore::setState(INPUT_ID id, INPUT_STATE state)
 
    if (!sendToHwStub(cmd))
    {
+      result = false;
       logger_send(TF_ERROR, __func__, "cannot write inputs state to hw stub");
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s:%u %u => %u", __func__, id, state, result);
+   return result;
 }
-void TestCore::setState(DHT_SENSOR_ID id, DHT_SENSOR_TYPE type, int8_t temp, int8_t hum)
+bool TestCore::setSensorState(DHT_SENSOR_ID id, DHT_SENSOR_TYPE type, int8_t temp, int8_t hum)
 {
+   bool result = true;
    std::vector<uint8_t> cmd;
 
    cmd.push_back(DHT_STATE_SET);
@@ -308,11 +318,15 @@ void TestCore::setState(DHT_SENSOR_ID id, DHT_SENSOR_TYPE type, int8_t temp, int
 
    if (!sendToHwStub(cmd))
    {
+      result = false;
       logger_send(TF_ERROR, __func__, "cannot write DHT sensor data");
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s:%u %u %d %u => %u", __func__, id, type, temp, hum, result);
+   return result;
 }
-void TestCore::triggerInterrupt()
+bool TestCore::triggerInterrupt()
 {
+   bool result = true;
    std::vector<uint8_t> cmd;
 
    cmd.push_back(I2C_INT_TRIGGER);
@@ -320,37 +334,57 @@ void TestCore::triggerInterrupt()
 
    if (!sendToHwStub(cmd))
    {
+      result = false;
       logger_send(TF_ERROR, __func__, "cannot trigger interrupt data");
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %u", __func__, result);
+   return result;
 }
-RELAY_STATE TestCore::getState(RELAY_ID id)
+bool TestCore::checkRelayState(RELAY_ID id, RELAY_STATE state)
+{
+   bool result = getRelayState(id) == state;
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %u", __func__, result);
+   return result;
+}
+bool TestCore::checkInputState(INPUT_ID id, INPUT_STATE state)
+{
+   bool result = getInputState(id) == state;
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %u", __func__, result);
+   return result;
+}
+RELAY_STATE TestCore::getRelayState(RELAY_ID id)
 {
    RELAY_STATE state = m_i2c_map[RELAYS_I2C_ADDRESS].state & rel_id_to_mask(id)? RELAY_STATE_OFF : RELAY_STATE_ON;
    return state;
 }
-INPUT_STATE TestCore::getState(INPUT_ID id)
+INPUT_STATE TestCore::getInputState(INPUT_ID id)
 {
    INPUT_STATE state = m_i2c_map[INPUTS_I2C_ADDRESS].state & inp_id_to_mask(id)? INPUT_STATE_INACTIVE : INPUT_STATE_ACTIVE;
    return state;
 }
 void TestCore::startI2CBuffering(uint8_t address)
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    m_i2c_map[address].buffering_enabled = true;
 }
 void TestCore::stopI2CBuffering(uint8_t address)
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    m_i2c_map[address].buffering_enabled = false;
 }
 void TestCore::clearI2CBuffer(uint8_t address)
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    m_i2c_map[address].buffer.clear();
 }
 bool TestCore::checkI2CBufferSize(uint8_t address, size_t size)
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    return (size == m_i2c_map[address].buffer.size())? true : false;
 }
 bool TestCore::checkI2CBufferElement(uint8_t address, uint16_t idx, uint16_t exp)
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    bool result = false;
    if (idx < m_i2c_map[address].buffer.size())
    {
@@ -360,6 +394,7 @@ bool TestCore::checkI2CBufferElement(uint8_t address, uint16_t idx, uint16_t exp
 }
 void TestCore::clearAppDataBuffer()
 {
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    m_app_ntfs.clear();
 }
 bool TestCore::wasAppNtfSent(NTF_CMD_ID id, const std::vector<uint8_t>& msg)
@@ -373,5 +408,6 @@ bool TestCore::wasAppNtfSent(NTF_CMD_ID id, const std::vector<uint8_t>& msg)
          break;
       }
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s:%u => %u", __func__, id, result);
    return result;
 }

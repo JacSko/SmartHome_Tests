@@ -7,6 +7,14 @@
 
 struct FanModuleTestFixture : public testing::Test
 {
+
+   FanModuleTestFixture ()
+   {
+   }
+
+   ~FanModuleTestFixture ()
+   {
+   }
    virtual void SetUp()
    {
       tc.runTest(TEST_NAME);
@@ -23,11 +31,17 @@ struct FanModuleTestFixture : public testing::Test
 
 TEST_F(FanModuleTestFixture, Fan_enabled_when_humidity_rised_above_threshold)
 {
-   ASSERT_EQ(tc.getState(RELAY_BATHROOM_FAN), RELAY_STATE_OFF);
-   tc.setState(DHT_SENSOR2, DHT_TYPE_DHT11, 24, 95);
-   WAIT_S(30);
-   EXPECT_EQ(tc.getState(RELAY_BATHROOM_FAN), RELAY_STATE_ON);
+   ASSERT_TRUE(tc.checkRelayState(RELAY_BATHROOM_FAN, RELAY_STATE_OFF));
+   tc.setSensorState(DHT_SENSOR2, DHT_TYPE_DHT11, 24, 95);
+   WAIT_S(40);
+   EXPECT_TRUE(tc.checkRelayState(RELAY_BATHROOM_FAN, RELAY_STATE_ON));
    EXPECT_TRUE(tc.wasAppNtfSent(NTF_FAN_STATE, {NTF_FAN_STATE, NTF_NTF, 1, FAN_STATE_ON}));
    EXPECT_TRUE(tc.wasAppNtfSent(NTF_RELAYS_STATE, {NTF_RELAYS_STATE, NTF_NTF, 2, 11, RELAY_STATE_ON}));
+
+   tc.setSensorState(DHT_SENSOR2, DHT_TYPE_DHT11, 24, 60);
+   WAIT_S(40);
+   EXPECT_TRUE(tc.checkRelayState(RELAY_BATHROOM_FAN, RELAY_STATE_OFF));
+   EXPECT_TRUE(tc.wasAppNtfSent(NTF_FAN_STATE, {NTF_FAN_STATE, NTF_NTF, 1, FAN_STATE_OFF}));
+   EXPECT_TRUE(tc.wasAppNtfSent(NTF_RELAYS_STATE, {NTF_RELAYS_STATE, NTF_NTF, 2, 11, RELAY_STATE_OFF}));
 
 }

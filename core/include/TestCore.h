@@ -82,13 +82,15 @@ public:
    TestCore();
    bool runTest(const std::string& test_name);
    void stopTest();
+   bool checkRelayState(RELAY_ID id, RELAY_STATE state);
+   bool checkInputState(INPUT_ID id, INPUT_STATE state);
 
-   void setState(RELAY_ID id, RELAY_STATE state);
-   void setState(INPUT_ID id, INPUT_STATE state);
-   void setState(DHT_SENSOR_ID id, DHT_SENSOR_TYPE type, int8_t temp, int8_t hum);
-   void triggerInterrupt();
-   RELAY_STATE getState(RELAY_ID);
-   INPUT_STATE getState(INPUT_ID);
+   bool setRelayState(RELAY_ID id, RELAY_STATE state);
+   bool setInputState(INPUT_ID id, INPUT_STATE state);
+   bool setSensorState(DHT_SENSOR_ID id, DHT_SENSOR_TYPE type, int8_t temp, int8_t hum);
+   bool triggerInterrupt();
+   RELAY_STATE getRelayState(RELAY_ID);
+   INPUT_STATE getInputState(INPUT_ID);
 
    void startI2CBuffering(uint8_t address);
    void stopI2CBuffering(uint8_t address);
