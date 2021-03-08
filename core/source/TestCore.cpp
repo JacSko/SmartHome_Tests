@@ -343,13 +343,13 @@ bool TestCore::triggerInterrupt()
 bool TestCore::checkRelayState(RELAY_ID id, RELAY_STATE state)
 {
    bool result = getRelayState(id) == state;
-   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %u", __func__, result);
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s : %u %u => %u", __func__, id, state, result);
    return result;
 }
 bool TestCore::checkInputState(INPUT_ID id, INPUT_STATE state)
 {
    bool result = getInputState(id) == state;
-   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %u", __func__, result);
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s : %u %u => %u", __func__, id, state, result);
    return result;
 }
 RELAY_STATE TestCore::getRelayState(RELAY_ID id)

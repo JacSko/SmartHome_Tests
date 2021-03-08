@@ -62,8 +62,6 @@ bool logger_initialize(const std::string& logfile_path)
    {
       char complete_path [512];
       snprintf(complete_path, 512, "%s/logs/%s.txt", PROJECT_ROOT_PATH, logfile_path.c_str());
-
-      printf("opening file:%s:\n", complete_path);
       m_logger.logfile.open(std::string(complete_path), std::ios::out);
       if (m_logger.logfile)
       {
@@ -93,7 +91,6 @@ void logger_notify_data()
       m_logger.logfile << std::string(m_logger_buffer.data());
       m_logger.logfile.flush();
    }
-   std::cout << std::string(m_logger_buffer.data());
 }
 void logger_send(LogGroup group, const char* prefix, const char* fmt, ...)
 {
@@ -116,6 +113,10 @@ void logger_send(LogGroup group, const char* prefix, const char* fmt, ...)
          m_logger_buffer[idx++] = '\n';
          m_logger_buffer[idx] = 0x00;
          logger_notify_data();
+         if (group == TF_TEST_MARKER)
+         {
+            std::cout << m_logger_buffer.data();
+         }
       }
    }
 }

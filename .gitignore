@@ -5,3 +5,4 @@
 doc/*
 !doc/Documentation.ods
 logs/*
+test_suites/bin/*
