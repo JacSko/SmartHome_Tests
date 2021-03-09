@@ -379,17 +379,18 @@ void TestCore::clearI2CBuffer(uint8_t address)
 }
 bool TestCore::checkI2CBufferSize(uint8_t address, size_t size)
 {
-   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
-   return (size == m_i2c_map[address].buffer.size())? true : false;
+   size_t buf_size = m_i2c_map[address].buffer.size();
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s => %d", __func__, buf_size);
+   return (size == buf_size)? true : false;
 }
 bool TestCore::checkI2CBufferElement(uint8_t address, uint16_t idx, uint16_t exp)
 {
-   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    bool result = false;
    if (idx < m_i2c_map[address].buffer.size())
    {
       result = m_i2c_map[address].buffer[idx] == exp;
    }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s : %u %u %u => %d", __func__, address, idx, exp, result);
    return result;
 }
 void TestCore::clearAppDataBuffer()
