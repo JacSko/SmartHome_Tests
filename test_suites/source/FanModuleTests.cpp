@@ -9,7 +9,7 @@
  *
  * @brief Tests performed on SmartHome binary to verify the common scenarios for Bathroom fan controller.
  *
- * @par
+ * @tests
  * - Humidity_rised_above_threshold_than_dropped_below_threashold,
  * - Humidity_rised_but_do_not_crossed_threashold,
  * - Humidity_rised_fan_suspended_and_unsuspeneded,
