@@ -1,5 +1,5 @@
 add_executable(FanModuleTests
-            source/FanModuleTests.cpp
+            FanModuleTests.cpp
 )
 
 target_include_directories(FanModuleTests PUBLIC
@@ -15,7 +15,7 @@ add_test(NAME FanModuleTests COMMAND FanModuleTests)
 ###############################
 
 add_executable(SlmModuleTests
-            source/SlmModuleTests.cpp
+            SlmModuleTests.cpp
 )
 
 target_include_directories(SlmModuleTests PUBLIC

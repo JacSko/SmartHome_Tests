@@ -5,4 +5,5 @@
 doc/*
 !doc/Documentation.ods
 logs/*
-test_suites/bin/*
+test_executables/*
+

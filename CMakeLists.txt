@@ -12,7 +12,7 @@ add_definitions(-DPROJECT_ROOT_PATH=\"${PROJECT_SOURCE_DIR}\" -DSIMULATION)
 
 # Builds normal tests, that cooperates with SmartHome binary
 if (NOT UNIT_TESTS)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_suites/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_executables)
 endif()
 
 
