@@ -65,6 +65,7 @@ bool TestCore::runTest(const std::string& test_name)
    logger_send_if(!result, TF_ERROR, __func__, "init error, conn status: STUB:%u BT:%u APP:%u", m_hwstub_driver.isConnected(),
                                                                                                 m_bluetooth_driver.isConnected(),
                                                                                                 m_app_ntf_driver.isConnected());
+   WAIT_S(5); /* test binary need to wakeup */
    return result;
 }
 void TestCore::stopTest()
