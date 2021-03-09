@@ -377,6 +377,25 @@ void TestCore::clearI2CBuffer(uint8_t address)
    logger_send(TF_TEST_MARKER, "TEST_STEP", "%s", __func__);
    m_i2c_map[address].buffer.clear();
 }
+bool TestCore::waitForI2CNotification(uint8_t address, uint16_t state, uint32_t timeout_ms)
+{
+   bool result = false;
+   auto time = std::chrono::system_clock::now();
+   while ( (std::chrono::system_clock::now() - time) < std::chrono::milliseconds(timeout_ms))
+   {
+      {
+         std::lock_guard<std::mutex> lock(m_buf_mtx);
+         if (m_i2c_map[address].state == state)
+         {
+            result = true;
+            break;
+         }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+   }
+   logger_send(TF_TEST_MARKER, "TEST_STEP", "%s : %u %u %u => %d", __func__, address, state, timeout_ms, result);
+   return result;
+}
 bool TestCore::checkI2CBufferSize(uint8_t address, size_t size)
 {
    size_t buf_size = m_i2c_map[address].buffer.size();

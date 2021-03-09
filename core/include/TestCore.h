@@ -95,6 +95,7 @@ public:
    void startI2CBuffering(uint8_t address);
    void stopI2CBuffering(uint8_t address);
    void clearI2CBuffer(uint8_t address);
+   bool waitForI2CNotification(uint8_t address, uint16_t state, uint32_t timeout_ms);
 
    bool checkI2CBufferSize(uint8_t address, size_t size);
    bool checkI2CBufferElement(uint8_t address, uint16_t idx, uint16_t exp);
