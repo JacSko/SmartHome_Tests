@@ -1,5 +1,3 @@
-if (NOT UNIT_TESTS)
-
 add_library(Logger STATIC
 		source/Logger.cpp
 )
@@ -42,12 +40,3 @@ target_link_libraries(TestCore PUBLIC
 	TestSubjectExecutor
 	SocketDriver
 )
-
-endif()
-
-
-if (UNIT_TESTS)
-
-	add_subdirectory(tests)
-
-endif()

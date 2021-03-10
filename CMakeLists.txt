@@ -9,21 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 project(smarthome_tests)
 
 add_definitions(-DPROJECT_ROOT_PATH=\"${PROJECT_SOURCE_DIR}\" -DSIMULATION)
-
-# Builds normal tests, that cooperates with SmartHome binary
-if (NOT UNIT_TESTS)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_executables)
-endif()
-
-
-# Builds unit tests of core test framework implementation
-#if (UNIT_TESTS)
-#	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-#	add_definitions(
-#		-DUNIT_TESTS
-#		)
-#endif()
-
 set(CMAKE_CXX_FLAGS "-g -O0 -Wall -fno-exceptions -fprofile-arcs -ftest-coverage -fPIC")
 enable_testing()
 
