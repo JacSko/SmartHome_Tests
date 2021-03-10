@@ -40,7 +40,7 @@ bool TestCore::runTest(const std::string& test_name)
                                     this->onAppEvent(ev, data, size);
                                  });
 
-   /* run testes binary */
+   /* run tested binary */
    m_test_bin_pid = m_bin_exec.start_test_subject();
 
    m_hwstub_driver.connect("127.0.0.1", HW_STUB_CONTROL_PORT);

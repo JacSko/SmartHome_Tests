@@ -5,7 +5,13 @@
 /**
  * @file TestCore.h
  *
- * @brief TODO: update comment
+ * @brief
+ *    Class is responsible for executing binary given by constructor parameter.
+ *
+ * @details
+ *    Given process is executed in background.
+ *    To start process, call start_test_subject() and save the PID.
+ *    To stop execution, call stop_test_subject(_pid_).
  *
  * @details
  *

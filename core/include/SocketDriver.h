@@ -5,7 +5,11 @@
  * @file SocketDriver.h
  *
  * @brief
- *    Implementation of ISocketDriver interface.
+ *    Implementation of Socket driver.
+ *
+ * @description
+ *    This class is responsible for communication with TCP clients from tested binary.
+ *    Module opens 3 TCP servers (for HW_STUB control, APP_NTF and logs).
  *
  * @author Jacek Skowronek
  * @date   05/02/2021
@@ -66,9 +70,6 @@ private:
    int m_client;
    struct sockaddr_in m_serv_addr;
    SocketListener m_listener;
-#if defined (SOCKDRV_FRIEND_TESTS)
-   SOCKDRV_FRIEND_TESTS
-#endif
 };
 
 #endif
